@@ -7,6 +7,12 @@ from urllib.parse import quote as urlquote, urljoin
 import re
 import requests
 
+# Similar to urljoin, but constructs url from path segments instead of relative url
+def urlpath(base, *segments):
+    base = base.rstrip('/')
+    url = '/'.join((urlquote(segment, safe='') for segment in segments))
+    return '{}/{}'.format(base, url)
+
 class Repo(ABC):
     @abstractmethod
     def url(self):
@@ -40,7 +46,7 @@ class CurseForge(Repo):
 
     def resolve_mc_version(self, mc_version):
         if not self.mc_versions:
-            res = requests.get('{}/{}'.format(self.url(), 'mc-mods'))
+            res = requests.get(urlpath(self.url(), 'mc-mods'))
             page = BeautifulSoup(res.text, 'lxml')
             self.mc_versions = dict((option.string.strip(), option.get('value'))
                                     for option in page.find('select', id='filter-game-version').find_all('option'))
@@ -56,7 +62,7 @@ class CurseForgeMod(Mod):
         self.mod = mod
 
     def url(self):
-        return '{}/projects/{}'.format(self.curse_forge.url(), urlquote(self.mod, safe=''))
+        return urlpath(self.curse_forge.url(), 'projects', self.mod)
 
     def doc(self):
         url = self.url()
@@ -67,7 +73,7 @@ class CurseForgeMod(Mod):
                      if link.string.strip() == 'Wiki'), url)
 
     def latest(self, mc_version):
-        url = '{}/{}'.format(self.url(), 'files')
+        url = urlpath(self.url(), 'files')
         res = requests.get(url, params = {
             'filter-game-version': self.curse_forge.resolve_mc_version(mc_version),
             'sort': 'releasetype',
@@ -82,7 +88,7 @@ class CurseForgeMod(Mod):
                 # TODO: Grab dependencies
                 return [urljoin(url, row.find(class_='project-file-download-button').find('a').get('href'))]
 
-        raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(self.mod, mc_version))        
+        raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(self.mod, mc_version))
 
 class Micdoodle8(Repo):
     def url(self):
@@ -103,26 +109,26 @@ class Galacticraft(Mod):
         self.micdoodle8 = micdoodle8
 
     def url(self):
-        return '{}/mods/galacticraft'.format(self.micdoodle8.url())
+        return urlpath(self.micdoodle8.url(), 'mods', 'galacticraft')
 
     def doc(self):
         return 'https://wiki.micdoodle8.com/wiki/Galacticraft'
 
     def latest(self, mc_version):
-        url = '{}/{}'.format(self.url(), 'downloads')
+        url = urlpath(self.url(), 'downloads')
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         downloads = page.find(id=self.resolve_mc_version(page, mc_version))
         latest = self.resolve_download_section(downloads, 'Promoted')
         return [self.resolve_download_url(url) for url in latest]
 
-    def resolve_mc_version(self, url, mc_version):
-        versions = url.find('select', id='mc_version')
+    def resolve_mc_version(self, page, mc_version):
+        versions = page.find('select', id='mc_version')
         try:
             return next(option.get('value')
                         for option in versions.find_all('option', string=mc_version))
         except StopIteration:
-            raise LookupError('\'galacticraft\' doesn\'t have a release for minecraft {}'.format(mc_version))
+            raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format('galacticraft', mc_version))
 
     def resolve_download_section(self, downloads, section):
         # TODO: Support scraping links from 'Latest' sections
@@ -142,7 +148,7 @@ class OptiFine(Mod):
         return 'https://github.com/sp614x/optifine/tree/master/OptiFineDoc/doc'
 
     def latest(self, mc_version):
-        url = '{}/{}'.format(self.url(), 'downloads')
+        url = urlpath(self.url(), 'downloads')
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         download = self.resolve_download_section(page, mc_version)
