@@ -21,6 +21,9 @@ class Mod(ABC):
     def url(self):
         pass
 
+    def doc(self):
+        return self.url()
+
     @abstractmethod
     def latest(self, mc_version):
         pass
@@ -39,7 +42,7 @@ class CurseForge(Repo):
         if not self.mc_versions:
             res = requests.get('{}/{}'.format(self.url(), 'mc-mods'))
             page = BeautifulSoup(res.text, 'lxml')
-            self.mc_versions = dict((option.text.strip(), option.get('value'))
+            self.mc_versions = dict((option.string.strip(), option.get('value'))
                                     for option in page.find('select', id='filter-game-version').find_all('option'))
 
         try:
@@ -54,6 +57,14 @@ class CurseForgeMod(Mod):
 
     def url(self):
         return '{}/projects/{}'.format(self.curse_forge.url(), urlquote(self.mod, safe=''))
+
+    def doc(self):
+        url = self.url()
+        res = requests.get(url)
+        page = BeautifulSoup(res.text, 'lxml')
+        return next((urljoin(url, link.get('href'))
+                     for link in page.find(class_='e-menu').find_all('a')
+                     if link.string.strip() == 'Wiki'), url)
 
     def latest(self, mc_version):
         url = '{}/{}'.format(self.url(), 'files')
@@ -94,6 +105,9 @@ class Galacticraft(Mod):
     def url(self):
         return '{}/mods/galacticraft'.format(self.micdoodle8.url())
 
+    def doc(self):
+        return 'https://wiki.micdoodle8.com/wiki/Galacticraft'
+
     def latest(self, mc_version):
         url = '{}/{}'.format(self.url(), 'downloads')
         res = requests.get(url)
@@ -124,6 +138,9 @@ class OptiFine(Mod):
     def url(self):
         return 'https://optifine.net'
 
+    def doc(self):
+        return 'https://github.com/sp614x/optifine/tree/master/OptiFineDoc/doc'
+
     def latest(self, mc_version):
         url = '{}/{}'.format(self.url(), 'downloads')
         res = requests.get(url)
@@ -147,6 +164,9 @@ class PixelmonReforged(Mod):
     def url(self):
         return 'https://reforged.gg'
 
+    def doc(self):
+        return 'https://pixelmonmod.com/wiki'
+
     def latest(self, mc_version):
         if mc_version != '1.12.2':
             raise LookupError('unsupported minecraft version: {}'.format(mc_version))
@@ -161,20 +181,30 @@ class PixelmonReforged(Mod):
 # Examples:
 curse_forge = CurseForge()
 print(curse_forge.url())
+
 invtweaks = curse_forge.mod('inventory-tweaks')
 print(invtweaks.url())
+print(invtweaks.doc())
 print(invtweaks.latest('1.12.2'))
+
+jei = curse_forge.mod('jei')
+print(jei.url())
+print(jei.doc())
+print(jei.latest('1.12.2'))
 
 micdoodle8 = Micdoodle8()
 print(micdoodle8.url())
 galacticraft = micdoodle8.mod('galacticraft')
 print(galacticraft.url())
+print(galacticraft.doc())
 print(galacticraft.latest('1.12.2'))
 
 optifine = OptiFine()
 print(optifine.url())
+print(optifine.doc())
 print(optifine.latest('1.12.2'))
 
 pixelmon = PixelmonReforged()
 print(pixelmon.url())
+print(pixelmon.doc())
 print(pixelmon.latest('1.12.2'))
