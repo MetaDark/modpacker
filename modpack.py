@@ -136,6 +136,27 @@ class OptiFine(Source):
         res = requests.get(url)
         return urljoin(url, BeautifulSoup(res.text, 'lxml').find(id='Download').find('a').get('href'))
 
+class PixelmonReforged(Source):
+    def homepage(self):
+        return 'https://reforged.gg'
+
+    def modpage(self, mod):
+        return self.homepage()
+
+    def latest(self, mod, mc_version):
+        if mod:
+            raise LookupError('source provides only one mod')
+
+        if mc_version != '1.12.2':
+            raise LookupError('unsupported minecraft version: {}', mc_version)
+
+        url = self.modpage(mod)
+        res = requests.get(url)
+        page = BeautifulSoup(res.text, 'lxml')
+
+        # TODO: Bypass adfly
+        return [urljoin(url, page.find('a', 'download').get('href'))]
+
 # Examples:
 source = CurseForge()
 print(source.homepage())
@@ -148,6 +169,11 @@ print(source.modpage('galacticraft'))
 print(source.latest('galacticraft', '1.12.2'))
 
 source = OptiFine()
+print(source.homepage())
+print(source.modpage(None))
+print(source.latest(None, '1.12.2'))
+
+source = PixelmonReforged()
 print(source.homepage())
 print(source.modpage(None))
 print(source.latest(None, '1.12.2'))
