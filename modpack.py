@@ -7,50 +7,37 @@ from urllib.parse import quote as urlquote, urljoin
 import re
 import requests
 
-class Source(ABC):
+class Repo(ABC):
     @abstractmethod
-    def homepage(self):
+    def url(self):
         pass
 
     @abstractmethod
-    def modpage(self, mod):
+    def mod(self, mod):
+        pass
+
+class Mod(ABC):
+    @abstractmethod
+    def url(self):
         pass
 
     @abstractmethod
-    def latest(self, mod, mc_version):
+    def latest(self, mc_version):
         pass
 
-class CurseForge(Source):
+class CurseForge(Repo):
     def __init__(self):
         self.mc_versions = None
 
-    def homepage(self):
+    def url(self):
         return 'https://minecraft.curseforge.com'
 
-    def modpage(self, mod):
-        return '{}/projects/{}'.format(self.homepage(), urlquote(mod, safe=''))
-
-    def latest(self, mod, mc_version):
-        url = '{}/{}'.format(self.modpage(mod), 'files')
-        res = requests.get(url, params = {
-            'filter-game-version': self.resolve_mc_version(mc_version),
-            'sort': 'releasetype',
-        })
-
-        if not res:
-            raise LookupError('failed to find mod: {}'.format(mod))
-
-        page = BeautifulSoup(res.text, 'lxml')
-        for row in page.find('table', class_='listing-project-file').find_all('tr'):
-            if row.find(class_='release-phase'):
-                # TODO: Grab dependencies
-                return [urljoin(url, row.find(class_='project-file-download-button').find('a').get('href'))]
-
-        raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(mod, mc_version))
+    def mod(self, mod):
+        return CurseForgeMod(self, mod)
 
     def resolve_mc_version(self, mc_version):
         if not self.mc_versions:
-            res = requests.get('{}/{}'.format(self.homepage(), 'mc-mods'))
+            res = requests.get('{}/{}'.format(self.url(), 'mc-mods'))
             page = BeautifulSoup(res.text, 'lxml')
             self.mc_versions = dict((option.text.strip(), option.get('value'))
                                     for option in page.find('select', id='filter-game-version').find_all('option'))
@@ -60,42 +47,68 @@ class CurseForge(Source):
         except:
             raise LookupError('failed to find minecraft version: {}'.format(mc_version))
 
-class Micdoodle8(Source):
-    def homepage(self):
+class CurseForgeMod(Mod):
+    def __init__(self, curse_forge, mod):
+        self.curse_forge = curse_forge
+        self.mod = mod
+
+    def url(self):
+        return '{}/projects/{}'.format(self.curse_forge.url(), urlquote(self.mod, safe=''))
+
+    def latest(self, mc_version):
+        url = '{}/{}'.format(self.url(), 'files')
+        res = requests.get(url, params = {
+            'filter-game-version': self.curse_forge.resolve_mc_version(mc_version),
+            'sort': 'releasetype',
+        })
+
+        if not res:
+            raise LookupError('failed to find mod: {}'.format(self.mod))
+
+        page = BeautifulSoup(res.text, 'lxml')
+        for row in page.find('table', class_='listing-project-file').find_all('tr'):
+            if row.find(class_='release-phase'):
+                # TODO: Grab dependencies
+                return [urljoin(url, row.find(class_='project-file-download-button').find('a').get('href'))]
+
+        raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(self.mod, mc_version))        
+
+class Micdoodle8(Repo):
+    def url(self):
         return 'https://micdoodle8.com'
 
-    def modpage(self, mod):
-        return '{}/mods/{}'.format(self.homepage(), urlquote(mod, safe=''))
-
-    def latest(self, mod, mc_version):
+    def mod(self, mod):
         mods = {
-            'galacticraft': self.latest_galacticraft,
+            'galacticraft': Galacticraft,
         }
 
         try:
-            return mods[mod](mc_version)
+            return mods[mod](self)
         except KeyError:
             raise LookupError('unsupported mod: {}'.format(mod))
 
-    def latest_galacticraft(self, mc_version):
-        url = '{}/{}'.format(self.modpage('galacticraft'), 'downloads')
+class Galacticraft(Mod):
+    def __init__(self, micdoodle8):
+        self.micdoodle8 = micdoodle8
+
+    def url(self):
+        return '{}/mods/galacticraft'.format(self.micdoodle8.url())
+
+    def latest(self, mc_version):
+        url = '{}/{}'.format(self.url(), 'downloads')
         res = requests.get(url)
-
-        if not res:
-            raise LookupError('failed to find mod: galacticraft')
-
         page = BeautifulSoup(res.text, 'lxml')
-        downloads = page.find(id=self.resolve_mc_version(page, 'galacticraft', mc_version))
+        downloads = page.find(id=self.resolve_mc_version(page, mc_version))
         latest = self.resolve_download_section(downloads, 'Promoted')
         return [self.resolve_download_url(url) for url in latest]
 
-    def resolve_mc_version(self, modpage, mod, mc_version):
-        versions = modpage.find('select', id='mc_version')
+    def resolve_mc_version(self, url, mc_version):
+        versions = url.find('select', id='mc_version')
         try:
             return next(option.get('value')
                         for option in versions.find_all('option', string=mc_version))
         except StopIteration:
-            raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(mod, mc_version))
+            raise LookupError('\'galacticraft\' doesn\'t have a release for minecraft {}'.format(mc_version))
 
     def resolve_download_section(self, downloads, section):
         # TODO: Support scraping links from 'Latest' sections
@@ -107,27 +120,21 @@ class Micdoodle8(Source):
         res = requests.get(url)
         return re.search(r'var phpStr = "(.*?)"', res.text)[1]
 
-class OptiFine(Source):
-    def homepage(self):
+class OptiFine(Mod):
+    def url(self):
         return 'https://optifine.net'
 
-    def modpage(self, mod):
-        return self.homepage()
-
-    def latest(self, mod, mc_version):
-        if mod:
-            raise LookupError('source provides only one mod')
-
-        url = '{}/{}'.format(self.modpage(mod), 'downloads')
+    def latest(self, mc_version):
+        url = '{}/{}'.format(self.url(), 'downloads')
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
-        download = self.resolve_download_section(page, mod, mc_version)
+        download = self.resolve_download_section(page, mc_version)
         return [self.resolve_download_url(url) for url in download]
 
-    def resolve_download_section(self, modpage, mod, mc_version):
-        version_header = modpage.find(class_='downloads').find('h2', string='Minecraft {}'.format(mc_version))
+    def resolve_download_section(self, url, mc_version):
+        version_header = url.find(class_='downloads').find('h2', string='Minecraft {}'.format(mc_version))
         if not version_header:
-            raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(mod, mc_version))
+            raise LookupError('\'optifine\' doesn\'t have a release for minecraft {}'.format(mc_version))
 
         downloads = version_header.find_next_sibling(class_='downloadTable')
         return [downloads.find(class_='downloadLineMirror').find('a').get('href')]
@@ -136,21 +143,15 @@ class OptiFine(Source):
         res = requests.get(url)
         return urljoin(url, BeautifulSoup(res.text, 'lxml').find(id='Download').find('a').get('href'))
 
-class PixelmonReforged(Source):
-    def homepage(self):
+class PixelmonReforged(Mod):
+    def url(self):
         return 'https://reforged.gg'
 
-    def modpage(self, mod):
-        return self.homepage()
-
-    def latest(self, mod, mc_version):
-        if mod:
-            raise LookupError('source provides only one mod')
-
+    def latest(self, mc_version):
         if mc_version != '1.12.2':
-            raise LookupError('unsupported minecraft version: {}', mc_version)
+            raise LookupError('unsupported minecraft version: {}'.format(mc_version))
 
-        url = self.modpage(mod)
+        url = self.url()
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
 
@@ -158,22 +159,22 @@ class PixelmonReforged(Source):
         return [urljoin(url, page.find('a', 'download').get('href'))]
 
 # Examples:
-source = CurseForge()
-print(source.homepage())
-print(source.modpage('inventory-tweaks'))
-print(source.latest('inventory-tweaks', '1.12.2'))
+curse_forge = CurseForge()
+print(curse_forge.url())
+invtweaks = curse_forge.mod('inventory-tweaks')
+print(invtweaks.url())
+print(invtweaks.latest('1.12.2'))
 
-source = Micdoodle8()
-print(source.homepage())
-print(source.modpage('galacticraft'))
-print(source.latest('galacticraft', '1.12.2'))
+micdoodle8 = Micdoodle8()
+print(micdoodle8.url())
+galacticraft = micdoodle8.mod('galacticraft')
+print(galacticraft.url())
+print(galacticraft.latest('1.12.2'))
 
-source = OptiFine()
-print(source.homepage())
-print(source.modpage(None))
-print(source.latest(None, '1.12.2'))
+optifine = OptiFine()
+print(optifine.url())
+print(optifine.latest('1.12.2'))
 
-source = PixelmonReforged()
-print(source.homepage())
-print(source.modpage(None))
-print(source.latest(None, '1.12.2'))
+pixelmon = PixelmonReforged()
+print(pixelmon.url())
+print(pixelmon.latest('1.12.2'))
