@@ -82,7 +82,7 @@ class Micdoodle8(Source):
         res = requests.get(url)
 
         if not res:
-            raise LookupError('failed to find mod: {}'.format('galacticraft'))
+            raise LookupError('failed to find mod: galacticraft')
 
         page = BeautifulSoup(res.text, 'lxml')
         downloads = page.find(id=self.resolve_mc_version(page, 'galacticraft', mc_version))
@@ -101,7 +101,7 @@ class Micdoodle8(Source):
         # TODO: Support scraping links from 'Latest' sections
         links = downloads.find('h4', string=section).find_next_siblings('a')
         links = takewhile(lambda elem: elem.name != 'h4', links)
-        return (link.get('href') for link in links)
+        return [link.get('href') for link in links]
 
     def resolve_download_url(self, url):
         res = requests.get(url)
@@ -120,19 +120,21 @@ class OptiFine(Source):
 
         url = '{}/{}'.format(self.modpage(mod), 'downloads')
         res = requests.get(url)
-
         page = BeautifulSoup(res.text, 'lxml')
-        version_header = page.find(class_='downloads').find('h2', string='Minecraft {}'.format(mc_version))
+        download = self.resolve_download_section(page, mod, mc_version)
+        return [self.resolve_download_url(url) for url in download]
+
+    def resolve_download_section(self, modpage, mod, mc_version):
+        version_header = modpage.find(class_='downloads').find('h2', string='Minecraft {}'.format(mc_version))
         if not version_header:
-            raise LookupError('failed to find minecraft version: {}'.format(mc_version))
+            raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(mod, mc_version))
 
         downloads = version_header.find_next_sibling(class_='downloadTable')
-        download_url = downloads.find(class_='downloadLineMirror').find('a').get('href')
-        return self.resolve_download_url(download_url)
+        return [downloads.find(class_='downloadLineMirror').find('a').get('href')]
 
     def resolve_download_url(self, url):
         res = requests.get(url)
-        print(res.text)
+        return urljoin(url, BeautifulSoup(res.text, 'lxml').find(id='Download').find('a').get('href'))
 
 # Examples:
 source = CurseForge()
@@ -145,7 +147,7 @@ print(source.homepage())
 print(source.modpage('galacticraft'))
 print(source.latest('galacticraft', '1.12.2'))
 
-# source = OptiFine()
-# print(source.homepage())
-# print(source.modpage(None))
-# source.latest(None, '1.12.2')
+source = OptiFine()
+print(source.homepage())
+print(source.modpage(None))
+print(source.latest(None, '1.12.2'))
