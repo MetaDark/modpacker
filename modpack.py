@@ -34,7 +34,7 @@ class Repo(ABC):
         pass
 
     @abstractmethod
-    def mod(self, mod: str) -> Mod:
+    def mod(self, mod_id: str) -> Mod:
         pass
 
 class CurseForge(Repo):
@@ -43,8 +43,8 @@ class CurseForge(Repo):
     def url(self) -> Url:
         return Url('https://minecraft.curseforge.com')
 
-    def mod(self, mod: str) -> Mod:
-        return CurseForgeMod(self, mod)
+    def mod(self, mod_id: str) -> Mod:
+        return CurseForgeMod(self, mod_id)
 
     def resolve_mc_version(self, mc_version: str) -> str:
         if not self.mc_versions:
@@ -59,12 +59,12 @@ class CurseForge(Repo):
             raise LookupError('failed to find minecraft version: {}'.format(mc_version))
 
 class CurseForgeMod(Mod):
-    def __init__(self, curse_forge: CurseForge, mod: str) -> None:
+    def __init__(self, curse_forge: CurseForge, mod_id: str) -> None:
         self.curse_forge = curse_forge
-        self.mod = mod
+        self.mod_id = mod_id
 
     def url(self) -> Url:
-        return urlpath(self.curse_forge.url(), 'projects', self.mod)
+        return urlpath(self.curse_forge.url(), 'projects', self.mod_id)
 
     def doc(self) -> Url:
         url = self.url()
@@ -82,7 +82,7 @@ class CurseForgeMod(Mod):
         })
 
         if not res:
-            raise LookupError('failed to find mod: {}'.format(self.mod))
+            raise LookupError('failed to find mod: {}'.format(self.mod_id))
 
         page = BeautifulSoup(res.text, 'lxml')
         for row in page.find('table', class_='listing-project-file').find_all('tr'):
@@ -90,21 +90,21 @@ class CurseForgeMod(Mod):
                 # TODO: Grab dependencies
                 return [Url(urljoin(url, row.find(class_='project-file-download-button').find('a').get('href')))]
 
-        raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(self.mod, mc_version))
+        raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(self.mod_id, mc_version))
 
 class Micdoodle8(Repo):
     def url(self) -> Url:
         return Url('https://micdoodle8.com')
 
-    def mod(self, mod: str) -> Mod:
+    def mod(self, mod_id: str) -> Mod:
         mods = {
             'galacticraft': Galacticraft,
         }
 
         try:
-            return mods[mod](self)
+            return mods[mod_id](self)
         except KeyError:
-            raise LookupError('unsupported mod: {}'.format(mod))
+            raise LookupError('unsupported mod: {}'.format(mod_id))
 
 class Galacticraft(Mod):
     def __init__(self, micdoodle8: Micdoodle8) -> None:
