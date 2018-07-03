@@ -1,6 +1,6 @@
 from base import Mod
 from bs4 import BeautifulSoup
-from typing import List
+from typing import Iterable
 from url import Url, urljoin
 import requests
 
@@ -11,7 +11,7 @@ class PixelmonReforged(Mod):
     def doc(self) -> Url:
         return Url('https://pixelmonmod.com/wiki')
 
-    def latest(self, mc_version: str) -> List[Url]:
+    def latest(self, mc_version: str) -> Iterable[Url]:
         if mc_version != '1.12.2':
             raise LookupError('unsupported minecraft version: {}'.format(mc_version))
 

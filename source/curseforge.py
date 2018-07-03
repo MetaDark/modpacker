@@ -1,6 +1,6 @@
 from base import Repo, Mod
 from bs4 import BeautifulSoup
-from typing import Dict, List, Optional
+from typing import Iterable, Dict, Optional
 from url import Url, urlpath, urljoin
 import requests
 
@@ -41,7 +41,7 @@ class CurseForgeMod(Mod):
                      for link in page.find(class_='e-menu').find_all('a')
                      if link.string.strip() == 'Wiki'), url)
 
-    def latest(self, mc_version: str) -> List[Url]:
+    def latest(self, mc_version: str) -> Iterable[Url]:
         url = urlpath(self.url(), 'files')
         res = requests.get(url, params = {
             'filter-game-version': self.curseforge.resolve_mc_version(mc_version),

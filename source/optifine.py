@@ -1,6 +1,6 @@
 from base import Mod
 from bs4 import BeautifulSoup, Tag
-from typing import List
+from typing import Iterable
 from url import Url, urlpath, urljoin
 import requests
 
@@ -11,14 +11,14 @@ class OptiFine(Mod):
     def doc(self) -> Url:
         return Url('https://github.com/sp614x/optifine/tree/master/OptiFineDoc/doc')
 
-    def latest(self, mc_version: str) -> List[Url]:
+    def latest(self, mc_version: str) -> Iterable[Url]:
         url = urlpath(self.url(), 'downloads')
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         download = self.resolve_download_section(page, mc_version)
-        return [self.resolve_download_url(url) for url in download]
+        return (self.resolve_download_url(url) for url in download)
 
-    def resolve_download_section(self, page: Tag, mc_version: str) -> List[Url]:
+    def resolve_download_section(self, page: Tag, mc_version: str) -> Iterable[Url]:
         version_header = page.find(class_='downloads').find('h2', string='Minecraft {}'.format(mc_version))
         if not version_header:
             raise LookupError('\'optifine\' doesn\'t have a release for minecraft {}'.format(mc_version))

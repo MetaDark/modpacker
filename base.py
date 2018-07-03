@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Iterable
 from url import Url
 
 class Mod(ABC):
@@ -11,7 +11,7 @@ class Mod(ABC):
         return self.url()
 
     @abstractmethod
-    def latest(self, mc_version: str) -> List[Url]:
+    def latest(self, mc_version: str) -> Iterable[Url]:
         pass
 
 class Repo(ABC):

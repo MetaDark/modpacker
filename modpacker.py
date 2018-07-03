@@ -32,6 +32,6 @@ if __name__ == '__main__':
             source_id, *mod_id = mod.split()
             source = sources[source_id]
             if isinstance(source, Mod):
-                print(source.latest(version))
+                print(list(source.latest(version)))
             elif isinstance(source, Repo):
-                print(source.mod(mod_id[0]).latest(version))
+                print(list(source.mod(mod_id[0]).latest(version)))

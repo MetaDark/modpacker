@@ -1,7 +1,7 @@
 from base import Repo, Mod
 from bs4 import BeautifulSoup, Tag
 from itertools import takewhile
-from typing import List
+from typing import Iterable
 from url import Url, urlpath
 import re
 import requests
@@ -26,13 +26,13 @@ class Galacticraft(Mod):
     def doc(self) -> Url:
         return Url('https://wiki.micdoodle8.com/wiki/Galacticraft')
 
-    def latest(self, mc_version: str) -> List[Url]:
+    def latest(self, mc_version: str) -> Iterable[Url]:
         url = urlpath(self.url(), 'downloads')
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         downloads = page.find(id=self.resolve_mc_version(page, mc_version))
         latest = self.resolve_download_section(downloads, 'Promoted')
-        return [self.resolve_download_url(url) for url in latest]
+        return (self.resolve_download_url(url) for url in latest)
 
     def resolve_mc_version(self, page: Tag, mc_version: str) -> str:
         versions = page.find('select', id='mc_version')
@@ -42,11 +42,11 @@ class Galacticraft(Mod):
         except StopIteration:
             raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format('galacticraft', mc_version))
 
-    def resolve_download_section(self, downloads: Tag, section: str) -> List[Url]:
+    def resolve_download_section(self, downloads: Tag, section: str) -> Iterable[Url]:
         # TODO: Support scraping links from 'Latest' sections
         links = downloads.find('h4', string=section).find_next_siblings('a')
         links = takewhile(lambda elem: elem.name != 'h4', links)
-        return [Url(link.get('href')) for link in links]
+        return (Url(link.get('href')) for link in links)
 
     def resolve_download_url(self, url: Url) -> Url:
         res = requests.get(url)
