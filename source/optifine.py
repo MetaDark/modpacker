@@ -24,8 +24,8 @@ class OptiFine(Mod):
             raise LookupError('\'optifine\' doesn\'t have a release for minecraft {}'.format(mc_version))
 
         downloads = version_header.find_next_sibling(class_='downloadTable')
-        return [Url(downloads.find(class_='downloadLineMirror').find('a').get('href'))]
+        return [downloads.find(class_='downloadLineMirror').find('a').get('href')]
 
     def resolve_download_url(self, url: Url) -> Url:
         res = requests.get(url)
-        return Url(urljoin(url, BeautifulSoup(res.text, 'lxml').find(id='Download').find('a').get('href')))
+        return urljoin(url, BeautifulSoup(res.text, 'lxml').find(id='Download').find('a').get('href'))

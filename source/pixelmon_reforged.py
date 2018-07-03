@@ -20,4 +20,4 @@ class PixelmonReforged(Mod):
         page = BeautifulSoup(res.text, 'lxml')
 
         # TODO: Bypass adfly
-        return [Url(urljoin(url, page.find('a', 'download').get('href')))]
+        return [urljoin(url, page.find('a', 'download').get('href'))]

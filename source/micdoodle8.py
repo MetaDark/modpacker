@@ -46,11 +46,15 @@ class Galacticraft(Mod):
         # TODO: Support scraping links from 'Latest' sections
         links = downloads.find('h4', string=section).find_next_siblings('a')
         links = takewhile(lambda elem: elem.name != 'h4', links)
-        return (Url(link.get('href')) for link in links)
+        return (link.get('href') for link in links)
 
     def resolve_download_url(self, url: Url) -> Url:
         res = requests.get(url)
-        return Url(re.search(r'var phpStr = "(.*?)"', res.text)[1])
+        match = re.search(r'var phpStr = "(.*?)"', res.text)
+        if not match:
+            raise Exception('failed to resolve download url')
+
+        return Url(match[1])
 
 mods = {
     'galacticraft': Galacticraft,

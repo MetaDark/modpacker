@@ -37,7 +37,7 @@ class CurseForgeMod(Mod):
         url = self.url()
         res = requests.get(url)
         page = BeautifulSoup(res.text, 'lxml')
-        return next((Url(urljoin(url, link.get('href')))
+        return next((urljoin(url, link.get('href'))
                      for link in page.find(class_='e-menu').find_all('a')
                      if link.string.strip() == 'Wiki'), url)
 
@@ -55,6 +55,6 @@ class CurseForgeMod(Mod):
         for row in page.find('table', class_='listing-project-file').find_all('tr'):
             if row.find(class_='release-phase'):
                 # TODO: Grab dependencies
-                return [Url(urljoin(url, row.find(class_='project-file-download-button').find('a').get('href')))]
+                return [urljoin(url, row.find(class_='project-file-download-button').find('a').get('href'))]
 
         raise LookupError('\'{}\' doesn\'t have a release for minecraft {}'.format(self.mod_id, mc_version))
