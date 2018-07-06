@@ -1,5 +1,6 @@
 from typing import NewType
-from urllib.parse import quote as urlquote, urljoin
+from urllib.parse import urljoin, urlparse, quote as urlquote, unquote as urlunquote
+import posixpath
 
 Url = NewType('Url', str)
 
@@ -8,3 +9,6 @@ def urlpath(base: Url, *segments: str) -> Url:
     base = Url(base.rstrip('/'))
     url = '/'.join((urlquote(segment, safe='') for segment in segments))
     return Url('{}/{}'.format(base, url))
+
+def filename(url: Url) -> str:
+    return urlunquote(posixpath.basename(urlparse(url).path))
