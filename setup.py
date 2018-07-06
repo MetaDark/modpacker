@@ -1,15 +1,21 @@
 from setuptools import setup, find_packages
+import modpacker
 
 setup(name='modpacker',
-      version='1.0',
+      version=modpacker.version,
       description='Generate and maintain Minecraft modpacks',
       url='https://gitlab.com/MetaDark/modpacker',
       author='MetaDark',
       author_email='kira.bruneau@gmail.com',
       license='GPL3',
       packages=find_packages(),
+      entry_points= {
+          'console_scripts': [
+              'modpacker = modpacker:main'
+          ],
+      },
       install_requires=[
-          'bs4'
+          'bs4',
           'docopt',
           'requests',
       ],

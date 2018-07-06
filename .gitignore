@@ -1,2 +1,3 @@
+!/example/**/*.modpack
+*.egg-info/
 __pycache__
-/mods/
