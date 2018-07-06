@@ -18,5 +18,6 @@ setup(name='modpacker',
           'bs4',
           'docopt',
           'requests',
+          'unshortenit',
       ],
       zip_safe=True)
