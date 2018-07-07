@@ -5,6 +5,9 @@ from url import Url, urlpath, urljoin
 import requests
 
 class OptiFine(Mod):
+    def __init__(self, session: requests.Session) -> None:
+        self.session = session
+
     def url(self) -> Url:
         return Url('https://optifine.net')
 
@@ -13,7 +16,7 @@ class OptiFine(Mod):
 
     def latest(self, mc_version: str) -> Iterable[Url]:
         url = urlpath(self.url(), 'downloads')
-        res = requests.get(url)
+        res = self.session.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         download = self.resolve_download_section(page, mc_version)
         return (self.resolve_download_url(url) for url in download)
@@ -27,5 +30,5 @@ class OptiFine(Mod):
         return [downloads.find(class_='downloadLineMirror').find('a').get('href')]
 
     def resolve_download_url(self, url: Url) -> Url:
-        res = requests.get(url)
+        res = self.session.get(url)
         return urljoin(url, BeautifulSoup(res.text, 'lxml').find(id='Download').find('a').get('href'))

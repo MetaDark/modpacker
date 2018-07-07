@@ -7,6 +7,9 @@ import re
 import requests
 
 class Micdoodle8(Repo):
+    def __init__(self, session: requests.Session) -> None:
+        self.session = session
+
     def url(self) -> Url:
         return Url('https://micdoodle8.com')
 
@@ -28,7 +31,7 @@ class Galacticraft(Mod):
 
     def latest(self, mc_version: str) -> Iterable[Url]:
         url = urlpath(self.url(), 'downloads')
-        res = requests.get(url)
+        res = self.micdoodle8.session.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         downloads = page.find(id=self.resolve_mc_version(page, mc_version))
         latest = self.resolve_download_section(downloads, 'Promoted')
@@ -49,7 +52,7 @@ class Galacticraft(Mod):
         return (link.get('href') for link in links)
 
     def resolve_download_url(self, url: Url) -> Url:
-        res = requests.get(url)
+        res = self.micdoodle8.session.get(url)
         match = re.search(r'var phpStr = "(.*?)"', res.text)
         if not match:
             raise Exception('failed to resolve download url')

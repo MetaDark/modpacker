@@ -7,6 +7,9 @@ import requests
 class CurseForge(Repo):
     mc_versions: Optional[Dict[str, str]] = None
 
+    def __init__(self, session: requests.Session) -> None:
+        self.session = session
+
     def url(self) -> Url:
         return Url('https://minecraft.curseforge.com')
 
@@ -15,7 +18,7 @@ class CurseForge(Repo):
 
     def resolve_mc_version(self, mc_version: str) -> str:
         if not self.mc_versions:
-            res = requests.get(urlpath(self.url(), 'mc-mods'))
+            res = self.session.get(urlpath(self.url(), 'mc-mods'))
             page = BeautifulSoup(res.text, 'lxml')
             self.mc_versions = dict((option.string.strip(), option.get('value'))
                                     for option in page.find('select', id='filter-game-version').find_all('option'))
@@ -35,7 +38,7 @@ class CurseForgeMod(Mod):
 
     def doc(self) -> Url:
         url = self.url()
-        res = requests.get(url)
+        res = self.curseforge.session.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         return next((urljoin(url, link.get('href'))
                      for link in page.find(class_='e-menu').find_all('a')
@@ -43,7 +46,7 @@ class CurseForgeMod(Mod):
 
     def latest(self, mc_version: str) -> Iterable[Url]:
         url = urlpath(self.url(), 'files')
-        res = requests.get(url, params = {
+        res = self.curseforge.session.get(url, params = {
             'filter-game-version': self.curseforge.resolve_mc_version(mc_version),
             'sort': 'releasetype',
         })

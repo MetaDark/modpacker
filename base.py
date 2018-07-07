@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Iterable
 from url import Url
+import requests
 
 class Mod(ABC):
     @abstractmethod

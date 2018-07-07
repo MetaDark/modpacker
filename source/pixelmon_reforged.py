@@ -6,6 +6,9 @@ from url import Url, urljoin
 import requests
 
 class PixelmonReforged(Mod):
+    def __init__(self, session: requests.Session) -> None:
+        self.session = session
+
     def url(self) -> Url:
         return Url('https://reforged.gg')
 
@@ -17,7 +20,7 @@ class PixelmonReforged(Mod):
             raise LookupError('unsupported minecraft version: {}'.format(mc_version))
 
         url = self.url()
-        res = requests.get(url)
+        res = self.session.get(url)
         page = BeautifulSoup(res.text, 'lxml')
         download = urljoin(url, page.find('a', 'download').get('href'))
         return [self.resolve_download_url(download)]

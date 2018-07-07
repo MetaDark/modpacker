@@ -24,11 +24,13 @@ import requests
 import url as urllib
 
 version = '1.0'
+
+session = requests.Session()
 sources = {
-    'micdoodle8.com': Micdoodle8(),
-    'minecraft.curseforge.com': CurseForge(),
-    'optifine.net': OptiFine(),
-    'reforged.gg': PixelmonReforged(),
+    'micdoodle8.com': Micdoodle8(session),
+    'minecraft.curseforge.com': CurseForge(session),
+    'optifine.net': OptiFine(session),
+    'reforged.gg': PixelmonReforged(session),
 }
 
 def main(args=None) -> None:
@@ -71,7 +73,7 @@ def install_modpack(modpack: os.PathLike, directory: os.PathLike) -> None:
             print()
 
 def download(url: Url, directory: os.PathLike) -> None:
-    res = requests.get(url)
+    res = session.get(url)
 
     try:
         filename = cgi.parse_header(res.headers['Content-Disposition'])[1]['filename']
